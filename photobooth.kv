@@ -1,0 +1,83 @@
+#:kivy 1.0.9
+
+<StartScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+
+        Label:
+            text: "Welcome to the Cosmic Casbah\nPhoto Booth!\n\nReady to werk it, HOT STUFF?"
+            font_size: '48dp'
+            halign: 'center'
+
+        Button:
+            text: "Fuck yeah!"
+            font_size: '48dp'
+            size_hint_y: None
+            height: '120dp'
+            on_press:
+                root.manager.current = 'camera'
+
+<CameraScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+
+        RelativeLayout:
+            MirrorCamera:
+                id: camera
+                resolution: (1024, 768)
+                play: True
+                allow_stretch: True
+            Label:
+                id: message
+                halign: 'center'
+                font_size: '48dp'
+                pos_hint: {'center_x': 0.5, 'center_y': 0.1}
+
+<EmailEntryScreen>:
+    AnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'center'
+
+        BoxLayout:
+            orientation: 'vertical'
+
+            Label:
+                text: 'Want us to send you these photos\nafter the burn?'
+                halign: 'center'
+                font_size: '48dp'
+
+            TextInput:
+                text: ''
+                hint_text: 'you@email.com'
+                font_size: '48dp'
+                size_hint_y: None
+                height: '72dp'
+                size_hint_x: None
+                width: '1000dp'
+
+            BoxLayout:
+                orientation: 'horizontal'
+                Button:
+                    text: 'Okay!'
+                    font_size: '48dp'
+                    size_hint_y: None
+                    height: '120dp'
+                    on_press:
+                        root.manager.current = 'thanks'
+                Button:
+                    text: "Nah, I'm good"
+                    font_size: '48dp'
+                    size_hint_y: None
+                    height: '120dp'
+                    on_press:
+                        root.manager.current = 'thanks'
+
+<ThanksScreen>:
+    AnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'center'
+
+        Label:
+            text: 'Thanks for playing!\n\nFuck your Burn!'
+            font_size: '48dp'
+            halign: 'center'
