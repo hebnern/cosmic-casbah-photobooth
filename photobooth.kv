@@ -18,20 +18,20 @@
                 root.manager.current = 'camera'
 
 <CameraScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-
-        RelativeLayout:
-            MirrorCamera:
-                id: camera
-                resolution: (1024, 768)
-                play: True
-                allow_stretch: True
-            Label:
-                id: message
-                halign: 'center'
-                font_size: '48dp'
-                pos_hint: {'center_x': 0.5, 'center_y': 0.1}
+    RelativeLayout:
+        MirrorCamera:
+            id: camera
+            resolution: (1280, 960)
+            play: True
+            allow_stretch: True
+        Image:
+            id: viewport
+            allow_stretch: True
+        Label:
+            id: message
+            halign: 'center'
+            font_size: '48dp'
+            pos_hint: {'center_x': 0.5, 'center_y': 0.1}
 
 <EmailEntryScreen>:
     AnchorLayout:
@@ -57,14 +57,14 @@
                     size_hint_y: None
                     height: '72dp'
                     size_hint_x: None
-                    width: '1000dp'
+                    width: '800dp'
                     multiline: False
 
             BoxLayout:
                 orientation: 'horizontal'
                 Button:
                     id: ok_btn
-                    text: 'Okay!'
+                    text: 'Heck yeah!'
                     disabled: True
                     font_size: '48dp'
                     size_hint_y: None
@@ -85,6 +85,6 @@
         anchor_y: 'center'
 
         Label:
-            text: 'Thanks for playing!\n\nFuck your Burn!'
+            text: 'Rock the Casbah!\n\nFuck your Burn!'
             font_size: '48dp'
             halign: 'center'

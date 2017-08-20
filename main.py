@@ -12,9 +12,15 @@ from kivy.uix.camera import Camera
 from kivy.utils import platform
 from kivy.clock import Clock
 from kivy.core.audio import SoundLoader
+from kivy.config import Config
+from kivy.base import EventLoop
+from kivy.graphics.texture import Texture
 
 camera_sound = SoundLoader.load('camera_click.wav')
 countdown_sound = SoundLoader.load('countdown_blip.wav')
+
+from kivy.core.window import Window
+Window.softinput_mode = 'below_target'
 
 class StartScreen(Screen):
     pass
@@ -44,16 +50,13 @@ class CameraScreen(Screen):
         { 'action': 'done' },
     ]
 
+    def on_pre_enter(self):
+        viewport = self.ids['viewport']
+        camera = self.ids['camera']
+        viewport.texture = camera.texture
+
     def on_next_state(self, dt=None):
         state = CameraScreen._states[self.cur_state]
-
-        duration = state.get('duration', None)
-        if duration:
-            Clock.schedule_once(self.on_next_state, duration)
-
-        sound = state.get('sound', None)
-        if sound:
-            sound.play()
 
         msg = state.get('msg', '')
         self.ids['message'].text = msg
@@ -64,7 +67,17 @@ class CameraScreen(Screen):
         elif action == 'done':
             self.manager.current = 'email_entry'
         elif action == 'play':
-            self.ids['camera'].play = True
+            viewport = self.ids['viewport']
+            camera = self.ids['camera']
+            viewport.texture = camera.texture
+
+        sound = state.get('sound', None)
+        if sound:
+            sound.play()
+
+        duration = state.get('duration', None)
+        if duration:
+            Clock.schedule_once(self.on_next_state, duration)
 
         self.cur_state += 1
 
@@ -73,15 +86,40 @@ class CameraScreen(Screen):
         self.on_next_state()
 
     def capture(self):
+        viewport = self.ids['viewport']
         camera = self.ids['camera']
-        camera.play = False
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        camera.export_to_png("images/IMG_{}.png".format(timestr))
+
+        ct = camera.texture
+        snapshot = Texture.create(
+            size=ct.size[:2],
+            colorfmt=ct.colorfmt,
+            bufferfmt=ct.bufferfmt
+        )
+        snapshot.blit_buffer(
+            ct.pixels,
+            colorfmt=ct.colorfmt,
+            bufferfmt=ct.bufferfmt
+        )
+        snapshot.flip_horizontal()
+        snapshot.flip_vertical()
+        viewport.texture = snapshot
+
+        # timestr = time.strftime("%Y%m%d_%H%M%S")
+        # snapshot.save("images/IMG_{}.png".format(timestr), flipped=False)
 
 class EmailEntryScreen(Screen):
     def __init__(self, *args, **kwargs):
         super(EmailEntryScreen, self).__init__(*args, **kwargs)
         self.ids['email'].bind(text=self.validate_email)
+        self.ids['email'].bind(focus=self.on_email_focus_changed)
+
+    def on_pre_enter(self):
+        self.ids['email'].text = ''
+
+    def on_email_focus_changed(self, email_input_widget, has_focus):
+        if not has_focus:
+            app = App.get_running_app()
+            app.configure_android_app()
 
     def validate_email(self, email_input_widget, email_text):
         email_regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
@@ -99,16 +137,14 @@ class ThanksScreen(Screen):
 class MirrorCamera(Camera):
     def _camera_loaded(self, *largs):
         self.texture = self._camera.texture
-        self.texture_size = list(self.texture.size)
         self.texture.flip_horizontal()
         if platform == 'android':
             self.texture.flip_vertical()
 
 class PhotoBoothApp(App):
     def build(self):
-        if platform == 'android':
-            from android.runnable import Runnable
-            Runnable(self.configure_android_app)()
+        self.configure_android_app()
+        EventLoop.window.bind(on_keyboard=self.hook_keyboard)
         sm = ScreenManager()
         sm.add_widget(StartScreen(name='start'))
         sm.add_widget(CameraScreen(name='camera'))
@@ -116,22 +152,30 @@ class PhotoBoothApp(App):
         sm.add_widget(ThanksScreen(name='thanks'))
         return sm
 
+    def hook_keyboard(self, window, key, *largs):
+        if key == 27:
+            return True
+
     def configure_android_app(self):
-        from jnius import autoclass
+        if platform == 'android':
+            def do_configure():
+                from jnius import autoclass
 
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        View = autoclass('android.view.View')
-        Params = autoclass('android.view.WindowManager$LayoutParams')
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                View = autoclass('android.view.View')
+                Params = autoclass('android.view.WindowManager$LayoutParams')
 
-        PythonActivity.mActivity.getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-            View.SYSTEM_UI_FLAG_FULLSCREEN |
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        )
-        PythonActivity.mActivity.getWindow().addFlags(Params.FLAG_KEEP_SCREEN_ON)
+                PythonActivity.mActivity.getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                    View.SYSTEM_UI_FLAG_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+                PythonActivity.mActivity.getWindow().addFlags(Params.FLAG_KEEP_SCREEN_ON)
+            from android.runnable import Runnable
+            Runnable(do_configure)()
 
 if __name__ == '__main__':
     PhotoBoothApp().run()
