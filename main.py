@@ -6,6 +6,7 @@ kivy.core.camera.Camera = camera_android.CameraAndroid
 # import logging
 # Logger.setLevel(logging.TRACE)
 
+import os
 import time
 import re
 
@@ -108,8 +109,17 @@ class CameraScreen(Screen):
         snapshot.flip_vertical()
         viewport.texture = snapshot
 
-        # timestr = time.strftime("%Y%m%d_%H%M%S")
-        # snapshot.save("images/IMG_{}.png".format(timestr), flipped=False)
+        camera._camera.take_picture(self.jpeg_cb)
+
+    def jpeg_cb(self, data):
+        output_path = '/sdcard/Pictures/photobooth'
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+
+        timestr = time.strftime("%Y%m%d_%H%M%S")
+        output_file = '%s/IMG_%s.jpg' % (output_path, timestr)
+        with open(output_file, 'w+') as f:
+            f.write(data)
 
 class EmailEntryScreen(Screen):
     def __init__(self, *args, **kwargs):

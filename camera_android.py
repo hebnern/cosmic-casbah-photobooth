@@ -41,6 +41,19 @@ class AutoFocusCallback(PythonJavaClass):
     def onAutoFocus(self, success, camera):
         self._callback(success, camera)
 
+class PictureCallback(PythonJavaClass):
+    """
+    Callback interface used to notify on completion of camera auto focus.
+    """
+    __javainterfaces__ = ('android.hardware.Camera$PictureCallback', )
+
+    def __init__(self, callback):
+        super(PictureCallback, self).__init__()
+        self._callback = callback
+
+    @java_method('([BLandroid/hardware/Camera;)V')
+    def onPictureTaken(self, data, camera):
+        self._callback(data, camera)
 
 class CameraAndroid(CameraBase):
     """
@@ -53,11 +66,20 @@ class CameraAndroid(CameraBase):
         self._android_camera = None
         self._preview_cb = PreviewCallback(self._on_preview_frame)
         self._autofocus_cb = AutoFocusCallback(self._on_autofocus)
+        self._jpeg_cb = PictureCallback(self._on_jpeg)
         self._buflock = threading.Lock()
         super(CameraAndroid, self).__init__(**kwargs)
 
     def __del__(self):
         self._release_camera()
+
+    def take_picture(self, jpeg_cb):
+        self._client_jpeg_cb = jpeg_cb
+        self._android_camera.takePicture(None, None, self._jpeg_cb)
+
+    def _on_jpeg(self, data, camera):
+        self._android_camera.startPreview()
+        self._client_jpeg_cb(data.tostring())
 
     def init_camera(self):
         self._release_camera()
@@ -65,6 +87,8 @@ class CameraAndroid(CameraBase):
         params = self._android_camera.getParameters()
         width, height = self._resolution
         params.setPreviewSize(width, height)
+        params.setPictureSize(3264, 2448)
+        params.setJpegQuality(80)
         self._android_camera.setParameters(params)
         # self._android_camera.setDisplayOrientation()
         self.fps = 30.
