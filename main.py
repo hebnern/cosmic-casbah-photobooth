@@ -1,6 +1,10 @@
-from kivy.logger import Logger
-import logging
-Logger.setLevel(logging.TRACE)
+import kivy.core.camera
+import camera_android
+kivy.core.camera.Camera = camera_android.CameraAndroid
+
+# from kivy.logger import Logger
+# import logging
+# Logger.setLevel(logging.TRACE)
 
 import time
 import re
