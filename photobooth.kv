@@ -42,23 +42,30 @@
             orientation: 'vertical'
 
             Label:
-                text: 'Want us to send you these photos\nafter the burn?'
+                text: 'Want us to send you these photos\nafter the Burn?'
                 halign: 'center'
                 font_size: '48dp'
 
-            TextInput:
-                text: ''
-                hint_text: 'you@email.com'
-                font_size: '48dp'
-                size_hint_y: None
-                height: '72dp'
-                size_hint_x: None
-                width: '1000dp'
+            AnchorLayout:
+                anchor_x: 'center'
+                anchor_y: 'center'
+
+                TextInput:
+                    id: email
+                    hint_text: 'you@email.com'
+                    font_size: '48dp'
+                    size_hint_y: None
+                    height: '72dp'
+                    size_hint_x: None
+                    width: '1000dp'
+                    multiline: False
 
             BoxLayout:
                 orientation: 'horizontal'
                 Button:
+                    id: ok_btn
                     text: 'Okay!'
+                    disabled: True
                     font_size: '48dp'
                     size_hint_y: None
                     height: '120dp'

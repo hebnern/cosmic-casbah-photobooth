@@ -3,6 +3,7 @@ import logging
 Logger.setLevel(logging.TRACE)
 
 import time
+import re
 
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -20,7 +21,7 @@ class StartScreen(Screen):
 
 class CameraScreen(Screen):
     _states = [
-        { 'msg': "Ready?", 'duration': 2.0 },
+        { 'msg': "Ready?", 'duration': 2.0, 'action': 'play' },
         { 'msg': "Let's go!", 'duration': 2.0 },
 
         { 'msg': '3', 'duration': 1.5, 'sound': countdown_sound },
@@ -29,13 +30,13 @@ class CameraScreen(Screen):
         { 'msg': '', 'duration': 1.0, 'sound': camera_sound, 'action': 'capture_image' },
         { 'msg': "Hot damn, that looks good!\nLet's take another.", 'duration': 3.0 },
 
-        { 'msg': '3', 'duration': 1.5, 'sound': countdown_sound },
+        { 'msg': '3', 'duration': 1.5, 'sound': countdown_sound, 'action': 'play' },
         { 'msg': '2', 'duration': 1.5, 'sound': countdown_sound },
         { 'msg': '1', 'duration': 1.5, 'sound': countdown_sound },
         { 'msg': '', 'duration': 1.0, 'sound': camera_sound, 'action': 'capture_image' },
-        { 'msg': "Oh, hells yes!\nHow about one more?", 'duration': 3.0 },
+        { 'msg': "Hells yes!\nHow about one more?", 'duration': 3.0 },
 
-        { 'msg': '3', 'duration': 1.5, 'sound': countdown_sound },
+        { 'msg': '3', 'duration': 1.5, 'sound': countdown_sound, 'action': 'play' },
         { 'msg': '2', 'duration': 1.5, 'sound': countdown_sound },
         { 'msg': '1', 'duration': 1.5, 'sound': countdown_sound },
         { 'msg': '', 'duration': 1.0, 'sound': camera_sound, 'action': 'capture_image' },
@@ -46,22 +47,24 @@ class CameraScreen(Screen):
     def on_next_state(self, dt=None):
         state = CameraScreen._states[self.cur_state]
 
-        msg = state.get('msg', '')
-        self.ids['message'].text = msg
+        duration = state.get('duration', None)
+        if duration:
+            Clock.schedule_once(self.on_next_state, duration)
 
         sound = state.get('sound', None)
         if sound:
             sound.play()
+
+        msg = state.get('msg', '')
+        self.ids['message'].text = msg
 
         action = state.get('action', None)
         if action == 'capture_image':
             self.capture()
         elif action == 'done':
             self.manager.current = 'email_entry'
-
-        duration = state.get('duration', None)
-        if duration:
-            Clock.schedule_once(self.on_next_state, duration)
+        elif action == 'play':
+            self.ids['camera'].play = True
 
         self.cur_state += 1
 
@@ -71,12 +74,18 @@ class CameraScreen(Screen):
 
     def capture(self):
         camera = self.ids['camera']
+        camera.play = False
         timestr = time.strftime("%Y%m%d_%H%M%S")
-        camera.export_to_png("IMG_{}.png".format(timestr))
-        print("Captured")
+        camera.export_to_png("images/IMG_{}.png".format(timestr))
 
 class EmailEntryScreen(Screen):
-    pass
+    def __init__(self, *args, **kwargs):
+        super(EmailEntryScreen, self).__init__(*args, **kwargs)
+        self.ids['email'].bind(text=self.validate_email)
+
+    def validate_email(self, email_input_widget, email_text):
+        email_regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+        self.ids['ok_btn'].disabled = re.match(email_regex, email_text) is None
 
 class ThanksScreen(Screen):
     def on_enter(self):
