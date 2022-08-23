@@ -19,7 +19,7 @@
 
 <CameraScreen>:
     RelativeLayout:
-        MirrorCamera:
+        Camera:
             id: camera
             resolution: (1920, 1080)
             play: True
@@ -69,15 +69,12 @@
                     font_size: '48dp'
                     size_hint_y: None
                     height: '120dp'
-                    on_press:
-                        root.manager.current = 'thanks'
                 Button:
+                    id: cancel_btn
                     text: "Nah, I'm good"
                     font_size: '48dp'
                     size_hint_y: None
                     height: '120dp'
-                    on_press:
-                        root.manager.current = 'thanks'
 
 <ThanksScreen>:
     AnchorLayout:

@@ -83,18 +83,18 @@ class CameraAndroid(CameraBase):
 
     def init_camera(self):
         self._release_camera()
-        self._android_camera = Camera.open(self._index)
+        self._android_camera = Camera.open(2)
         params = self._android_camera.getParameters()
         width, height = self._resolution
         params.setPreviewSize(width, height)
-        params.setPictureSize(3264, 2448)
+        params.setPictureSize(1920, 1080)
         params.setJpegQuality(80)
         self._android_camera.setParameters(params)
         # self._android_camera.setDisplayOrientation()
         self.fps = 30.
 
         pf = params.getPreviewFormat()
-        assert(pf == ImageFormat.NV21)  # default format is NV21
+        assert pf == ImageFormat.NV21  # default format is NV21
         self._bufsize = int(ImageFormat.getBitsPerPixel(pf) / 8. *
                             width * height)
 
@@ -105,6 +105,7 @@ class CameraAndroid(CameraBase):
         self._android_camera.setPreviewTexture(self._surface_texture)
 
         self._fbo = Fbo(size=self._resolution)
+        self._fbo['resolution'] = (float(width), float(height))
         self._fbo.shader.fs = '''
             #extension GL_OES_EGL_image_external : require
             #ifdef GL_ES
@@ -118,9 +119,12 @@ class CameraAndroid(CameraBase):
             /* uniform texture samplers */
             uniform sampler2D texture0;
             uniform samplerExternalOES texture1;
+            uniform vec2 resolution;
 
             void main()
             {
+                vec2 coord = vec2(tex_coord0.y * (
+                    resolution.y / resolution.x), 1. -tex_coord0.x);
                 gl_FragColor = texture2D(texture1, tex_coord0);
             }
         '''
@@ -163,7 +167,7 @@ class CameraAndroid(CameraBase):
         with self._buflock:
             self._buffer = None
         for k in range(2):  # double buffer
-            buf = '\x00' * self._bufsize
+            buf = b'\x00' * self._bufsize
             self._android_camera.addCallbackBuffer(buf)
         self._android_camera.setPreviewCallbackWithBuffer(self._preview_cb)
 

@@ -2,12 +2,13 @@ import kivy.core.camera
 import camera_android
 kivy.core.camera.Camera = camera_android.CameraAndroid
 
-# from kivy.logger import Logger
-# import logging
-# Logger.setLevel(logging.TRACE)
+from kivy.logger import Logger
+import logging
+Logger.setLevel(logging.INFO)
 
 import os
 import time
+import datetime
 import re
 
 from kivy.app import App
@@ -27,8 +28,19 @@ countdown_sound = SoundLoader.load('countdown_blip.wav')
 from kivy.core.window import Window
 Window.softinput_mode = 'below_target'
 
+output_path = '/sdcard/Pictures/photobooth'
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+
+cur_session_id = None
+cur_img_id = None
+
 class StartScreen(Screen):
-    pass
+    def on_enter(self):
+        global cur_session_id, cur_img_id
+        now = datetime.datetime.now()
+        cur_session_id = time.mktime(now.timetuple())
+        cur_img_id = 0
 
 class CameraScreen(Screen):
     _states = [
@@ -105,30 +117,57 @@ class CameraScreen(Screen):
             colorfmt=ct.colorfmt,
             bufferfmt=ct.bufferfmt
         )
-        snapshot.flip_horizontal()
-        snapshot.flip_vertical()
+        # snapshot.flip_horizontal()
+        # snapshot.flip_vertical()
         viewport.texture = snapshot
 
         camera._camera.take_picture(self.jpeg_cb)
 
     def jpeg_cb(self, data):
-        output_path = '/sdcard/Pictures/photobooth'
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        output_file = '%s/IMG_%s.jpg' % (output_path, timestr)
-        with open(output_file, 'w+') as f:
+        global cur_session_id, cur_img_id
+        output_file = '%s/%d_%d.jpg' % (output_path, cur_session_id, cur_img_id)
+        with open(output_file, 'wb') as f:
             f.write(data)
+
+        cur_img_id += 1
 
 class EmailEntryScreen(Screen):
     def __init__(self, *args, **kwargs):
         super(EmailEntryScreen, self).__init__(*args, **kwargs)
+        self._event = None
         self.ids['email'].bind(text=self.validate_email)
         self.ids['email'].bind(focus=self.on_email_focus_changed)
+        self.ids['ok_btn'].bind(on_press=self.on_ok_btn)
+        self.ids['cancel_btn'].bind(on_press=self.on_cancel_btn)
+
+    def on_ok_btn(self, e):
+        # write session
+        email = self.ids['email'].text
+        output_file = '%s/%d.txt' % (output_path, cur_session_id)
+        with open(output_file, 'w') as f:
+            f.write(email)
+
+        app = App.get_running_app()
+        app.root.transition.direction = 'left'
+        app.root.current = 'thanks'
+
+    def on_cancel_btn(self, e):
+        app = App.get_running_app()
+        app.root.transition.direction = 'left'
+        app.root.current = 'thanks'
 
     def on_pre_enter(self):
         self.ids['email'].text = ''
+        self.reset_timeout()
+
+    def reset_timeout(self):
+        def timeout_cb(dt):
+            app = App.get_running_app()
+            app.root.transition.direction = 'left'
+            app.root.current = 'start'
+
+        Clock.unschedule(timeout_cb)
+        Clock.schedule_once(timeout_cb, 60)
 
     def on_email_focus_changed(self, email_input_widget, has_focus):
         if not has_focus:
@@ -138,6 +177,7 @@ class EmailEntryScreen(Screen):
     def validate_email(self, email_input_widget, email_text):
         email_regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
         self.ids['ok_btn'].disabled = re.match(email_regex, email_text) is None
+        self.reset_timeout()
 
 class ThanksScreen(Screen):
     def on_enter(self):
@@ -147,13 +187,6 @@ class ThanksScreen(Screen):
             app.root.current = 'start'
 
         Clock.schedule_once(restart_cb, 3)
-
-class MirrorCamera(Camera):
-    def _camera_loaded(self, *largs):
-        self.texture = self._camera.texture
-        self.texture.flip_horizontal()
-        if platform == 'android':
-            self.texture.flip_vertical()
 
 class PhotoBoothApp(App):
     def build(self):
